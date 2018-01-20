@@ -1,0 +1,6 @@
+Manifest-Version: 1.0
+Permissions: all-permissions
+Application-Name: RubricaClient
+Codebase: https://localhost https://localhost:8443
+Trusted-Only: true
+Trusted-Library: true

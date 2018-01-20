@@ -1,0 +1,225 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>br.gov.serpro</groupId>
+	<artifactId>dnit-rubrica-client</artifactId>
+	<version>0.0.1</version>
+	<name>Cliente Assinador DNIT</name>
+	<description>Componente Java WebStart para assinatura digital nos sistemas do DNIT.</description>
+
+	<organization>
+		<name>SERPRO</name>
+		<url>http://www.serpro.gov.br</url>
+	</organization>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<timestamp>${maven.build.timestamp}</timestamp>
+		<maven.build.timestamp.format>dd/MM/yyyy HH:mm</maven.build.timestamp.format>
+		<manifest.filename>MANIFEST.MF</manifest.filename>
+		<file.name>dnit-rubrica</file.name>
+		<file.suffix></file.suffix>
+		<signer.version>3.2.1</signer.version>
+		<bouncycastle.version>1.52</bouncycastle.version>
+		<!-- A versão 1.52 é a mais compatível com ICP-Brasil. -->
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.demoiselle.signer</groupId>
+			<artifactId>core</artifactId>
+			<version>${signer.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.demoiselle.signer</groupId>
+			<artifactId>policy-impl-cades</artifactId>
+			<version>${signer.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.demoiselle.signer</groupId>
+			<artifactId>chain-icp-brasil</artifactId>
+			<version>${signer.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.demoiselle.signer</groupId>
+			<artifactId>timestamp</artifactId>
+			<version>${signer.version}</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.bouncycastle</groupId>
+			<artifactId>bcprov-jdk15on</artifactId>
+			<version>${bouncycastle.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.bouncycastle</groupId>
+			<artifactId>bcmail-jdk15on</artifactId>
+			<version>${bouncycastle.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.bouncycastle</groupId>
+			<artifactId>bcpkix-jdk15on</artifactId>
+			<version>${bouncycastle.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.bouncycastle</groupId>
+			<artifactId>bcprov-ext-jdk15on</artifactId>
+			<version>${bouncycastle.version}</version>
+		</dependency>
+		 
+		<dependency>
+			<groupId>org.demoiselle.signer</groupId>
+			<artifactId>jnlp</artifactId>
+			<version>2.0.0-BETA1</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.demoiselle.signer</groupId>
+					<artifactId>signature-core</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.demoiselle.signer</groupId>
+					<artifactId>signature-criptography</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.demoiselle.signer</groupId>
+					<artifactId>signature-policy-engine</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.demoiselle.signer</groupId>
+					<artifactId>signature-signer</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.demoiselle.signer</groupId>
+					<artifactId>signature-timestamp</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.demoiselle.signer</groupId>
+					<artifactId>ca-icpbrasil</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+			<version>2.9.3</version>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<!-- maven-compiler-plugin -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+				</configuration>
+			</plugin>
+			<!-- 
+			<plugin>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <index>true</index>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                        </manifest>
+                        <manifestEntries>
+                            <Permissions>all-permissions</Permissions>
+                            <Codebase>*</Codebase>
+                            <Application-Name>Cliente Assinador DNIT</Application-Name>
+                            <Application-Library-Allowable-Codebase>*</Application-Library-Allowable-Codebase>
+                            <Caller-Allowable-Codebase>*</Caller-Allowable-Codebase>
+                            <Trusted-Only>true</Trusted-Only>
+                            <Trusted-Library>false</Trusted-Library>
+                               True em Producao. Dependencias tambem precisam deste manifesto.
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+             -->
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifestFile>src/main/resources/META-INF/${manifest.filename}</manifestFile>
+                    </archive>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                    <finalName>${file.name}${file.suffix}</finalName>
+                    <appendAssemblyId>true</appendAssemblyId>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id> <!-- this is used for inheritance merges -->
+                        <phase>package</phase> <!-- bind to the packaging phase -->
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+		</plugins>
+	</build>
+
+	<profiles>
+		<profile>
+			<id>dsv</id>
+			<properties>
+				<file.suffix>-dsv</file.suffix>
+			</properties>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-jarsigner-plugin</artifactId>
+						<executions>
+							<execution>
+								<goals>
+									<goal>sign</goal>
+								</goals>
+							</execution>
+						</executions>
+						<configuration>
+							<keystore>${project.basedir}/src/main/jnlp/newcert.p12</keystore>
+							<keypass>secret</keypass>
+							<storepass>secret</storepass>
+							<alias>Spock</alias>
+							<storetype>pkcs12</storetype>
+							<verify>false</verify>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+
+	<distributionManagement>
+		<repository>
+			<id>nexus</id>
+			<name>releases</name>
+			<url>http://nexus.aic.serpro/content/repositories/releases</url>
+		</repository>
+		<snapshotRepository>
+			<id>nexus-snapshot</id>
+			<name>snapshots</name>
+			<url>http://nexus.aic.serpro/content/repositories/snapshots</url>
+		</snapshotRepository>
+	</distributionManagement>
+
+	<repositories>
+		<repository>
+			<id>demoiselle</id>
+			<name>Demoiselle SourceForge Repository</name>
+			<url>http://demoiselle.sourceforge.net/repository/release</url>
+		</repository>
+
+		<repository>
+			<id>yoava</id>
+			<name>AOL yoava</name>
+			<url>http://yoava.artifactoryonline.com/yoava/repo</url>
+		</repository>
+	</repositories>
+</project>

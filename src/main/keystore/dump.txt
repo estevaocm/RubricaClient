@@ -1,0 +1,31 @@
+Tipo de área de armazenamento de chaves: JKS
+Fornecedor da área de armazenamento de chaves: SUN
+
+Sua área de armazenamento de chaves contém 9 entradas
+
+acserprov3, 07/05/2013, trustedCertEntry, 
+Fingerprint (SHA1) do certificado: 28:6D:57:0B:BD:9D:18:4E:CF:85:53:86:0D:82:5A:74:2B:51:7E:05
+
+acserprov2, 07/05/2013, trustedCertEntry, 
+Fingerprint (SHA1) do certificado: 63:63:23:A5:F7:55:6F:86:9D:5E:B0:AA:CF:2F:30:17:5E:80:FE:CD
+
+serproacfv3, 07/05/2013, trustedCertEntry, 
+Fingerprint (SHA1) do certificado: B4:84:DC:C5:E1:47:21:03:6B:6F:C8:93:34:2E:C2:E9:BC:84:DC:12
+
+serproacfv1, 07/05/2013, trustedCertEntry, 
+Fingerprint (SHA1) do certificado: 7B:4A:00:17:9C:06:B6:59:9B:C3:E6:95:1D:8B:A0:58:0E:FE:20:24
+
+icp-brasilv3, 07/05/2013, trustedCertEntry, 
+Fingerprint (SHA1) do certificado: 66:13:CD:8D:D5:41:FA:A4:64:21:A7:D1:9C:5D:2F:71:FC:98:04:3A
+
+icp-brasilv2, 07/05/2013, trustedCertEntry, 
+Fingerprint (SHA1) do certificado: A9:82:2E:6C:69:33:C6:3C:14:8C:2D:CA:A4:4A:5C:F1:AA:D2:C4:2E
+
+serprov1, 07/05/2013, trustedCertEntry, 
+Fingerprint (SHA1) do certificado: C7:28:D6:12:C8:80:9C:07:87:EF:5C:8D:3D:C3:09:88:0D:D4:09:49
+
+peron_key, 07/05/2013, PrivateKeyEntry, 
+Fingerprint (SHA1) do certificado: 3E:5B:FB:B2:2B:28:E2:73:5F:77:57:A5:F3:D7:27:A9:6D:C3:CF:0F
+
+icp-brasil, 07/05/2013, trustedCertEntry, 
+Fingerprint (SHA1) do certificado: 70:5D:2B:45:65:C7:04:7A:54:06:94:A7:9A:F7:AB:B8:42:BD:C1:61

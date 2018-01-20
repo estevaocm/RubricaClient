@@ -1,0 +1,323 @@
+package br.gov.serpro.https;
+
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.Charset;
+import java.util.logging.Logger;
+
+import org.demoiselle.signer.jnlp.util.AuthorizationException;
+import org.demoiselle.signer.jnlp.util.ConectionException;
+
+/**
+ * 
+ * @author Demoiselle; Estêvão Monteiro
+ * @since 22/08/16
+ * 
+ */
+public class HttpClientUtils {
+
+	private static final Logger LOGGER = Logger.getLogger(HttpClientUtils.class.getName());
+	private static final String RUNTIME_VERSION = System.getProperty("java.version");
+	private static final int RUNTIME_MAJOR_VERSION = Integer.valueOf(RUNTIME_VERSION.substring(2, 3));
+	private static final int BUFFER_SIZE = 4096;
+
+	// TODO: Métodos DELETE e PATCH
+
+	// TODO: revisar métodos post/sendForm
+
+	public static String send(String url, String metodo, String params, String contentType, 
+			String accept, String sessao) {
+		
+		if(url == null || url.trim().isEmpty()) {
+			throw new IllegalArgumentException("url=" + url);
+		}
+
+		if(metodo == null || metodo.trim().isEmpty()) {
+			throw new IllegalArgumentException("metodo=" + metodo);
+		}
+
+		LOGGER.info(metodo + ": " + url);
+		
+		HttpURLConnection con = getConnection(url, sessao);
+		
+		if(accept != null) {
+			con.setRequestProperty("Accept", accept);
+		}
+		
+		if(contentType != null) {
+			con.setRequestProperty("Content-Type", contentType);
+		}
+		
+		try {
+			con.setRequestMethod(metodo);
+
+			if(params != null) {
+				// encodedData = URLEncoder.encode(params, "UTF-8");
+				con.setRequestProperty("Content-Length", String.valueOf(params.length()));
+				con.setDoOutput(true);
+				OutputStreamWriter wr = new OutputStreamWriter(con.getOutputStream());
+				try {
+					wr.write(params);
+					wr.flush();
+				}
+				finally{
+					wr.close();
+				}
+			}
+
+			getResponseCode(con);
+			String resposta = read(con.getInputStream());
+			LOGGER.info("Resposta: " + resposta);
+			return resposta;
+		}
+		catch (IOException e) {
+			Throwable causa = e.getCause() == null ? e : e.getCause();
+			throw new ConectionException(e.getMessage(), causa);
+		}
+		finally{
+			if (con != null) {
+				con.disconnect();
+			}
+		}
+	}
+
+	private static HttpURLConnection getConnection(String url, String sessao) {
+		HttpURLConnection con = null;
+		try {
+			con = (HttpURLConnection) new URL(url).openConnection();
+			con.setRequestProperty("Authorization", sessao);
+			con.setRequestProperty("User-Agent", "Java/" + RUNTIME_VERSION);
+			return con;
+		} 
+		catch (IOException e) {
+			throw new ConectionException(e.getMessage(), e.getCause());
+		}
+		finally{
+			if (con != null) {
+				con.disconnect();
+			}
+		}
+	}
+
+	private static void getResponseCode(HttpURLConnection con) throws IOException {
+
+		int responseCode = con.getResponseCode();
+
+		String mensagem = "";
+		if (responseCode >= 400) {
+			mensagem = "Erro HTTP " + responseCode;
+			LOGGER.severe(mensagem);
+		} 
+		else {
+			LOGGER.info("Resposta HTTP " + responseCode);
+		}
+
+		if (responseCode == HttpURLConnection.HTTP_UNAUTHORIZED || responseCode == HttpURLConnection.HTTP_FORBIDDEN) {
+			throw new AuthorizationException("Acesso ou operação não autorizado(a).");
+		}
+
+		if (responseCode == HttpURLConnection.HTTP_BAD_REQUEST) {
+			throw new AuthorizationException("Acesso ou operação inválido(a).");
+		}
+
+		if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
+			throw new AuthorizationException("Objeto não encontrado.");
+		}
+
+		if (responseCode == HttpURLConnection.HTTP_CONFLICT) {
+			throw new AuthorizationException("O objeto a inserir já existe.");
+		}
+
+		if (responseCode >= 400) {
+			LOGGER.severe(read(con.getErrorStream())); // Tende a trazer HTML do container Web
+			throw new ConectionException(mensagem);
+		}
+	}
+
+	public static String getText(String url, String sessao) {
+		return get(url, "text/plain", sessao);
+	}
+
+	public static String getJson(String url, String sessao) {
+		return get(url, "application/json", sessao);
+	}
+
+	public static String get(String url, String accept, String sessao) {
+		return send(url, "GET", null, null, accept, sessao);
+	}
+
+	/**
+	 * Cria um novo objeto.
+	 * 
+	 * @param url
+	 * @param params
+	 * @param token
+	 * @param certificate
+	 * @return
+	 */
+	public static String post(String url, String params, String sessao, InputStream certificate) {
+		return sendForm(url, params, sessao, certificate, "POST");
+	}
+
+	public static String post(String url, String params, String sessao) {
+		return post(url, params, sessao, null);
+	}
+
+	/**
+	 * Modifica ou substitui um objeto existente, ou cria um novo objeto com identificador especificado na requisição.
+	 * 
+	 * @param url
+	 * @param params
+	 * @param token
+	 * @param certificate
+	 * @return
+	 */
+	public static String put(String url, String params, String sessao, InputStream certificate) {
+		return sendForm(url, params, sessao, certificate, "PUT");
+	}
+
+	public static String sendForm(String url, String params, String sessao, InputStream certificate, String method) {
+		return send(url, method, params, "application/x-www-form-urlencoded", null, sessao);
+		//ou "application/octet-stream"
+	}
+
+	public static String read(InputStream stream) throws IOException {
+		try {
+			BufferedReader in = new BufferedReader(new InputStreamReader(stream, Charset.forName("UTF-8")));
+			String linha;
+			StringBuilder response = new StringBuilder();
+			linha = in.readLine();
+			if (linha != null) {
+				response.append(linha);
+			}
+			while ((linha = in.readLine()) != null) {
+				response.append(System.getProperty("line.separator"));
+				response.append(linha);
+			}
+			return response.toString();
+		} 
+		finally {
+			if (stream != null) {
+				stream.close();
+			}
+		}
+	}
+
+	public static String getTls() {
+		String prop = "https.protocols";
+		String tls;
+		if (RUNTIME_MAJOR_VERSION < 7) {
+			throw new RuntimeException(
+					"Favor atualizar o Java. Este assinador digital requer no mínimo a versão 7 (1.7)");
+		} 
+		else {
+			tls = "TLSv1.2";
+			System.setProperty(prop, "TLSv1,TLSv1.1," + tls);
+		} 
+		return tls;
+	}
+
+	/**
+	 *
+	 * @param content
+	 *            O conteudo a ser enviado
+	 * @param urlToUpload
+	 *            A url para onde o conteudo sera enviado via HTTPS
+	 * @param token
+	 *            Token que identifica o conteudo a ser enviado	 
+	 */
+	public static void uploadToURL(byte[] content, String urlToUpload, String token) {
+		HttpURLConnection con = null;
+		try {
+			ByteArrayInputStream in = new ByteArrayInputStream(content);
+
+			con = getConnection(urlToUpload, token);
+			con.setDoOutput(true);
+			con.setRequestMethod("POST");
+			con.setRequestProperty("Content-Type", "application/zip");
+			con.setRequestProperty("Authorization", "Token " + token);
+
+			OutputStream out = con.getOutputStream();
+			try{
+				copy(in, out);
+			}
+			finally{
+				out.flush();
+				out.close();
+			}
+			getResponseCode(con);
+
+		} 
+		catch (IOException e) {
+			throw new ConectionException(e.getMessage(), e.getCause());
+		}
+		finally{
+			if(con != null){
+				con.disconnect();
+			}
+		}
+	}
+
+	public static byte[] downloadFromUrl(String urlToDownload, String token) {
+		ByteArrayOutputStream outputStream = null;
+		HttpURLConnection con = null;
+		InputStream stream = null;
+		try{
+			try {
+				outputStream = new ByteArrayOutputStream();
+				byte[] chunk = new byte[BUFFER_SIZE];
+
+				con = getConnection(urlToDownload, token);
+				con.setRequestProperty("Authorization", "Token " + token);
+				con.setRequestProperty("Accept", "application/zip");
+				con.setRequestMethod("GET");
+
+				getResponseCode(con);
+
+				stream = con.getInputStream();
+
+				int bytesRead;
+				while ((bytesRead = stream.read(chunk)) > 0) {
+					outputStream.write(chunk, 0, bytesRead);
+				}
+
+				return outputStream.toByteArray();
+
+			}
+			finally{
+				if(con != null){
+					con.disconnect();
+				}
+				if(outputStream != null){
+					outputStream.close();
+				}
+				if(stream != null){
+					stream.close();
+				}
+			}
+		}
+		catch (IOException e) {
+			throw new ConectionException(e.getMessage(), e.getCause());
+		}
+	}
+
+	private static long copy(InputStream input, OutputStream output) throws IOException {
+		byte[] buffer = new byte[BUFFER_SIZE];
+		long count = 0L;
+		int n = 0;
+		while (-1 != (n = input.read(buffer))) {
+			output.write(buffer, 0, n);
+			count += n;
+		}
+		return count;
+	}
+
+}
