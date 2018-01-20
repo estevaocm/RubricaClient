@@ -3,62 +3,35 @@ package br.gov.serpro.rubrica.client;
 /**
  * 
  * @author Estêvão Monteiro
- * @since 09/01/2017
+ * @since 09/01/2018
  *
  */
 public class AssinaturaRemota {
 	
-	private Long codSolicitacao;
-	private String dataAssinatura;
-	private String tipoDocumento;
-	private String sistema;
-	private String resumo;
+	private Long idArquivo;
+	private String descricaoArquivo;
 	private String hash;
 	private String assinatura;
-	private String funcaoAssinante;
+	private String dadosNegocio;
 	
 	public AssinaturaRemota(){
 		super();//Nada a fazer.
 	}
 
-	public Long getCodSolicitacao() {
-		return codSolicitacao;
+	public Long getIdArquivo() {
+		return idArquivo;
 	}
 
-	public void setCodSolicitacao(Long codSolicitacao) {
-		this.codSolicitacao = codSolicitacao;
+	public void setIdArquivo(Long idArquivo) {
+		this.idArquivo = idArquivo;
 	}
 
-	public String getDataAssinatura() {
-		return dataAssinatura;
+	public String getDescricaoArquivo() {
+		return descricaoArquivo;
 	}
 
-	public void setDataAssinatura(String dataAssinatura) {
-		this.dataAssinatura = dataAssinatura;
-	}
-
-	public String getTipoDocumento() {
-		return tipoDocumento;
-	}
-
-	public void setTipoDocumento(String tipoDocumento) {
-		this.tipoDocumento = tipoDocumento;
-	}
-
-	public String getSistema() {
-		return sistema;
-	}
-
-	public void setSistema(String sistema) {
-		this.sistema = sistema;
-	}
-
-	public String getResumo() {
-		return resumo;
-	}
-
-	public void setResumo(String resumo) {
-		this.resumo = resumo;
+	public void setDescricaoArquivo(String descricaoArquivo) {
+		this.descricaoArquivo = descricaoArquivo;
 	}
 
 	public String getHash() {
@@ -77,23 +50,18 @@ public class AssinaturaRemota {
 		this.assinatura = assinatura;
 	}
 
-	public String getFuncaoAssinante() {
-		return funcaoAssinante;
+	public String getDadosNegocio() {
+		return dadosNegocio;
 	}
 
-	public void setFuncaoAssinante(String funcaoAssinante) {
-		this.funcaoAssinante = funcaoAssinante;
+	public void setDadosNegocio(String dadosNegocio) {
+		this.dadosNegocio = dadosNegocio;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see java.lang.Object#toString()
-	 */
 	@Override
 	public String toString() {
-		return "AssinaturaRemota [codSolicitacao=" + codSolicitacao + ", dataAssinatura=" + dataAssinatura
-				+ ", tipoDocumento=" + tipoDocumento + ", sistema=" + sistema + ", resumo=" + resumo + ", hash=" + hash
-				+ ", assinatura=" + assinatura + "]";
+		return "AssinaturaRemota [idArquivo=" + idArquivo + ", descricaoArquivo=" + descricaoArquivo + ", hash=" + hash
+				+ ", assinatura=" + assinatura + ", dadosNegocio=" + dadosNegocio + "]";
 	}
 
 }

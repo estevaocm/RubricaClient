@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * 
  * @author Estêvão Monteiro
- * @since 10/01/2017
+ * @since 10/01/2018
  *
  */
 public class SelecaoAssinaturaRemota {

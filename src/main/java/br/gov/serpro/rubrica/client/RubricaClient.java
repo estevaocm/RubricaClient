@@ -110,7 +110,7 @@ public class RubricaClient implements ControladorJanela {
         		if(doc.getHash() == null || doc.getHash().trim().isEmpty()) {
         			continue;
         		}
-        		this.listaDocumentos.add(formatarLinhaDocumento(doc));
+        		this.listaDocumentos.add(doc.getDescricaoArquivo());
         	}
         	
         	if(this.listaDocumentos.isEmpty()) {
@@ -129,15 +129,6 @@ public class RubricaClient implements ControladorJanela {
 		} 
     }
     
-    private String formatarLinhaDocumento(AssinaturaRemota doc){
-    	//TODO já deveria vir do servidor formatado!
-		String resumo = doc.getResumo().replaceAll("'", "").replaceAll(":", "").replaceAll("\"", "");
-		//TODO abreviar campos, separar campos por "/"
-		int i = resumo.indexOf("Empresa") +8;
-		resumo = resumo.substring(1, i).toLowerCase() + resumo.substring(i, resumo.length() -1);
-		return doc.getTipoDocumento() + " " + doc.getSistema() + ": " + resumo;
-    }
-
     /*
      * (non-Javadoc)
      * @see br.gov.serpro.rubrica.client.ControladorJanela#getText()
