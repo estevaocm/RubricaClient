@@ -1,23 +1,29 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	
 	<modelVersion>4.0.0</modelVersion>
+	
 	<groupId>br.gov.serpro</groupId>
-	<artifactId>dnit-rubrica-client</artifactId>
-	<version>0.0.1</version>
-	<name>Cliente Assinador DNIT</name>
-	<description>Componente Java WebStart para assinatura digital nos sistemas do DNIT.</description>
+	<artifactId>rubrica-client</artifactId>
+	<version>1.0.0</version>
 
+	<name>RubricaClient</name>
+	<description>Java REST client for signing hashe codes with ICP-Brasil certificate tokens. 
+	Intented for Java Web Start. Based on Demoiselle Signer and BouncyCastle. </description>
+	<url>https://github.com/estevaocm/RubricaClient</url>
+	
 	<organization>
 		<name>SERPRO</name>
-		<url>http://www.serpro.gov.br</url>
+		<url>https://www.serpro.gov.br</url>
 	</organization>
+	
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<timestamp>${maven.build.timestamp}</timestamp>
 		<maven.build.timestamp.format>dd/MM/yyyy HH:mm</maven.build.timestamp.format>
 		<manifest.filename>MANIFEST.MF</manifest.filename>
-		<file.name>dnit-rubrica</file.name>
+		<file.name>rubrica-client</file.name>
 		<file.suffix></file.suffix>
 		<signer.version>3.2.1</signer.version>
 		<bouncycastle.version>1.52</bouncycastle.version>
@@ -128,7 +134,7 @@
                         <manifestEntries>
                             <Permissions>all-permissions</Permissions>
                             <Codebase>*</Codebase>
-                            <Application-Name>Cliente Assinador DNIT</Application-Name>
+                            <Application-Name>RubricaClient</Application-Name>
                             <Application-Library-Allowable-Codebase>*</Application-Library-Allowable-Codebase>
                             <Caller-Allowable-Codebase>*</Caller-Allowable-Codebase>
                             <Trusted-Only>true</Trusted-Only>
@@ -195,19 +201,6 @@
 			</build>
 		</profile>
 	</profiles>
-
-	<distributionManagement>
-		<repository>
-			<id>nexus</id>
-			<name>releases</name>
-			<url>http://nexus.aic.serpro/content/repositories/releases</url>
-		</repository>
-		<snapshotRepository>
-			<id>nexus-snapshot</id>
-			<name>snapshots</name>
-			<url>http://nexus.aic.serpro/content/repositories/snapshots</url>
-		</snapshotRepository>
-	</distributionManagement>
 
 	<repositories>
 		<repository>
