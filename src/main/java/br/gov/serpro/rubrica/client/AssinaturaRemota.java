@@ -40,60 +40,96 @@ package br.gov.serpro.rubrica.client;
  */
 public class AssinaturaRemota {
 	
-	private Long idArquivo;
+	private String identificador;	
+	private String dataAssinatura;
 	private String descricaoArquivo;
-	private String hash;
+	private String hash256;
+	private String hash512;
 	private String assinatura;
-	private String dadosNegocio;
 	
-	public AssinaturaRemota(){
-		super();//Nada a fazer.
+	public AssinaturaRemota() {
+	}
+	
+	/**
+	 * Identificador único do arquivo a assinar.
+	 * @return
+	 */
+	public String getIdentificador() {
+		return identificador;
+	}
+	public void setIdentificador(String identificador) {
+		this.identificador = identificador;
 	}
 
-	public Long getIdArquivo() {
-		return idArquivo;
+	/**
+	 * Código SHA-256 em base 64.
+	 * @return
+	 */
+	public String getHash256() {
+		return hash256;
+	}
+	public void setHash256(String hash) {
+		this.hash256 = hash;
 	}
 
-	public void setIdArquivo(Long idArquivo) {
-		this.idArquivo = idArquivo;
+	/**
+	 * Código SHA-512 em base 64.
+	 * @return
+	 */
+	public String getHash512() {
+		return hash512;
 	}
 
+	public void setHash512(String hash512) {
+		this.hash512 = hash512;
+	}
+	
+	/**
+	 * Assinatura digital em base 64.
+	 * @return
+	 */
+	public String getAssinatura() {
+		return assinatura;
+	}
+	public void setAssinatura(String hashAssinado) {
+		this.assinatura = hashAssinado;
+	}
+
+	/**
+	 * Descrição do arquivo para verificação pelo usuário.
+	 * @return
+	 */
 	public String getDescricaoArquivo() {
 		return descricaoArquivo;
 	}
 
-	public void setDescricaoArquivo(String descricaoArquivo) {
-		this.descricaoArquivo = descricaoArquivo;
+	public void setDescricaoArquivo(String descricao) {
+		this.descricaoArquivo = descricao;
 	}
 
-	public String getHash() {
-		return hash;
+	/**
+	 * Data que será registrada para a assinatura.
+	 * No caso de documentos PDF, precisa ser pré-definida para preparação do arquivo
+	 * antes de se computar o código hash e assinar.
+	 * @return
+	 */
+	public String getDataAssinatura() {
+		return dataAssinatura;
 	}
 
-	public void setHash(String hash) {
-		this.hash = hash;
+	public void setDataAssinatura(String dataAssinatura) {
+		this.dataAssinatura = dataAssinatura;
 	}
 
-	public String getAssinatura() {
-		return assinatura;
-	}
-
-	public void setAssinatura(String assinatura) {
-		this.assinatura = assinatura;
-	}
-
-	public String getDadosNegocio() {
-		return dadosNegocio;
-	}
-
-	public void setDadosNegocio(String dadosNegocio) {
-		this.dadosNegocio = dadosNegocio;
-	}
-
+	/*
+	 * (non-Javadoc)
+	 * @see java.lang.Object#toString()
+	 */
 	@Override
 	public String toString() {
-		return "AssinaturaRemota [idArquivo=" + idArquivo + ", descricaoArquivo=" + descricaoArquivo + ", hash=" + hash
-				+ ", assinatura=" + assinatura + ", dadosNegocio=" + dadosNegocio + "]";
+		return "AssinaturaRemota [identificador=" + identificador + ", dataAssinatura=" + dataAssinatura
+				+ ", descricao=" + descricaoArquivo + ", hash256=" + hash256 + ", hash512=" + hash512 + ", assinatura="
+				+ assinatura + "]";
 	}
 
 }

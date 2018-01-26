@@ -42,8 +42,10 @@ import java.util.logging.Logger;
 
 import org.bouncycastle.util.encoders.Base64;
 import org.demoiselle.signer.core.extension.BasicCertificate;
+import org.demoiselle.signer.core.keystore.loader.configuration.Configuration;
 import org.demoiselle.signer.policy.engine.factory.PolicyFactory;
 import org.demoiselle.signer.policy.engine.factory.PolicyFactory.Policies;
+import org.demoiselle.signer.policy.impl.cades.SignerAlgorithmEnum;
 import org.demoiselle.signer.policy.impl.cades.factory.PKCS7Factory;
 import org.demoiselle.signer.policy.impl.cades.pkcs7.PKCS7Signer;
 
@@ -92,6 +94,25 @@ public class UserCertificateUtils {
 		signer.setCertificates(keyStore.getCertificateChain(alias));
 		
 		signer.setProvider(keyStore.getProvider());
+		
+		signer.setAlgorithm(getAlgoritmo(signer));
+	}
+	
+	public static SignerAlgorithmEnum getAlgoritmo(PKCS7Signer signer) {
+		SignerAlgorithmEnum retorno = SignerAlgorithmEnum.SHA512withRSA;
+
+		if (System.getProperty("java.version").contains("1.8") 
+				&& signer != null && signer.getProvider() != null 
+				&& signer.getProvider().getName().contains("TokenOuSmartCard_30")) {
+			LOGGER.info("Detectado token WatchData e Java 8; configurando o algoritmo para Sha256withRSA.");
+			retorno = SignerAlgorithmEnum.SHA256withRSA;
+		}
+		if (Configuration.getInstance().getSO().toLowerCase().indexOf("indows") > 0) {
+			LOGGER.info("Detectado Windows; configurando o algoritmo para Sha256withRSA.");
+			retorno = SignerAlgorithmEnum.SHA256withRSA;
+		}
+		return retorno;
+		
 	}
 
 	public static byte[] sign(byte[] content, PKCS7Signer signer) throws GeneralSecurityException{

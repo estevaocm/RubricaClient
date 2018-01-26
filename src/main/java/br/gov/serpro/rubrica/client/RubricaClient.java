@@ -35,9 +35,9 @@ package br.gov.serpro.rubrica.client;
 import java.io.IOException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
+import java.security.ProviderException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.swing.JFrame;
@@ -49,6 +49,7 @@ import org.demoiselle.signer.core.extension.BasicCertificate;
 import org.demoiselle.signer.core.keystore.loader.configuration.Configuration;
 import org.demoiselle.signer.jnlp.util.AuthorizationException;
 import org.demoiselle.signer.jnlp.util.ConectionException;
+import org.demoiselle.signer.policy.impl.cades.SignerAlgorithmEnum;
 import org.demoiselle.signer.policy.impl.cades.pkcs7.PKCS7Signer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -58,255 +59,288 @@ import br.gov.serpro.https.ServerCertificateUtils;
 import br.gov.serpro.https.UserCertificateUtils;
 
 /**
- * 
+ * Esta classe implementa as regras de negócio do RubricaClient através da interface ControladorJanela.
  * @author Estêvão Monteiro
  * @since 10/08/16
  * 
  */
 public class RubricaClient implements ControladorJanela {
 
-    private static final Logger LOGGER = Logger.getLogger(RubricaClient.class.getName());
+	private static final Logger LOGGER = Logger.getLogger(RubricaClient.class.getName());
 
-    //private static final long serialVersionUID = 1L;
+	private static final String JNLP_TOKEN = "jnlp.token";
+	private static final String JNLP_GET = "jnlp.get";
+	private static final String JNLP_POST = "jnlp.post";
 
-    private static final String JNLP_TOKEN = "jnlp.token";
-    private static final String JNLP_GET = "jnlp.get";
-    private static final String JNLP_POST = "jnlp.post";
+	static {
+		ServerCertificateUtils.suspenderValidacaoCadeia();//TODO rever isto
+	}
 
-    static {
-        ServerCertificateUtils.suspenderValidacaoCadeia();//TODO rever isto
-    }
+	private String cpf;
+	private String cnpj;
+	private String tokenSessao;
+	private String servicoGet;
+	private String servicoPost;
 
-    private String cpf;
-    private String cnpj;
-    private String tokenSessao;
-    private String servicoGet;
-    private String servicoPost;
-    
-    private List<String> listaDocumentos;
-    private SelecaoAssinaturaRemota selecao;
-    private JFrame janela;
-    private BasicCertificate certificado;
-    
-    private ObjectMapper jsonConv;
-	
-    public RubricaClient() {
-        configurar();
-        obterDadosSessao();
-    }
+	private List<String> listaDocumentos;
+	private SelecaoAssinaturaRemota selecao;
+	private JFrame janela;
+	private BasicCertificate certificado;
 
-    private void configurar() {
-    	this.tokenSessao = System.getProperty(JNLP_TOKEN);
-    	this.servicoGet = System.getProperty(JNLP_GET);
-    	this.servicoPost = System.getProperty(JNLP_POST);
+	private ObjectMapper jsonConv;
 
-        LOGGER.info("jnlp.token: " + this.tokenSessao);
-        LOGGER.info("jnlp.get: " + this.servicoGet);
-        LOGGER.info("jnlp.post: " + this.servicoPost);
+	public RubricaClient() {
+		configurar();
+		getDadosSessao();
+	}
 
-        if (this.tokenSessao == null || this.tokenSessao.isEmpty()) {
-            falharCritico("A variável \"jnlp.token\" nao está configurada.");
-        }
+	/*
+	 * (non-Javadoc)
+	 * @see br.gov.serpro.dnit.rubrica.client.ControladorJanela#execute(java.security.KeyStore, java.lang.String)
+	 */
+	@Override
+	public void execute(KeyStore keystore, String alias) {
 
-        if (this.servicoGet == null || this.servicoGet.isEmpty()) {
-            falharCritico("A variável \"jnlp.get\" nao está configurada.");
-        }
+		LOGGER.info("Microsoft CryptoAPI está "
+				+ (Configuration.getInstance().isMSCapiDisabled() ? "indisponível" : "disponível"));
 
-        if (this.servicoPost == null || this.servicoPost.isEmpty()) {
-            falharCritico("A variável \"jnlp.post\" nao está configurada.");
-        }
-    }
-    
-    private void obterDadosSessao() {
-        try {
-        	String parametros = HttpClientUtils.getJson(this.servicoGet, this.tokenSessao);
-        	
-        	this.jsonConv = new ObjectMapper();
-        	this.selecao = this.jsonConv.readValue(parametros, SelecaoAssinaturaRemota.class);
-        	
-        	String cpf = selecao.getCpfAssinante();
-            if (cpf.length() == 11) {
-                this.cpf = cpf;
-            }
-            else {
-                falharCritico("Falha ao obter CPF da sessão do usuário.");
-            }
-        	
-        	if(this.selecao.getAssinaturasRemotas() == null || this.selecao.getAssinaturasRemotas().isEmpty()){
-        		falharCritico("Erro de parâmetros do servidor: documentos");
-        	}
+		try {
+			verificarCertificado(keystore, alias);
 
-        	this.listaDocumentos = new ArrayList<String>();
-        	
-        	for(AssinaturaRemota doc : this.selecao.getAssinaturasRemotas()){
-        		if(doc.getHash() == null || doc.getHash().trim().isEmpty()) {
-        			continue;
-        		}
-        		this.listaDocumentos.add(doc.getDescricaoArquivo());
-        	}
-        	
-        	if(this.listaDocumentos.isEmpty()) {
-        		falharCritico("Erro de parâmetros do servidor: nenhum documento com hash");
-        	}
+			PKCS7Signer signer = UserCertificateUtils.buildSigner(keystore, alias);
+			SignerAlgorithmEnum algoritmo = UserCertificateUtils.getAlgoritmo(signer);
 
-        }
-        catch (AuthorizationException e) {
-            falharCritico(e, "Erro de autorização: ");
-        }
-        catch (ConectionException e) {
-            falharCritico(e, "Erro na comunicação com o servidor: ");
-        }
-        catch (ClassCastException | IOException e) {
-        	falharCritico(e, "Erro com os parâmetros recebidos: ");
-		} 
-    }
-    
-    /*
-     * (non-Javadoc)
-     * @see br.gov.serpro.rubrica.client.ControladorJanela#getText()
-     */
-    @Override
-    public String getText() {
-        return null;
-    }
+			//Varrendo todos os arquivos, gera uma assinatura para cada arquivo
+			int assinados = 0;
+			for (AssinaturaRemota doc : this.selecao.getAssinaturasRemotas()) {
+				LOGGER.info("Assinando documento: " + doc);
+
+				byte[] hash = getHash(doc, algoritmo, signer);
+				if(hash == null) {
+					continue;
+				}
+				String assinatura = null;
+				try {
+					//TODO testar co-assinatura
+					assinatura = UserCertificateUtils.signHashToBase64(hash, signer);
+				}
+				catch(ProviderException e) {
+					Throwable t = e.getCause();
+					if(t == null) t = e;
+					falharCritico(t, "Falha no driver do token: ");
+				}
+				doc.setAssinatura(assinatura);
+				assinados++;
+			}
+			if(assinados == 0) {
+				falharCritico("Nenhum documento foi assinado");
+			}
+
+			String json = this.jsonConv.writeValueAsString(this.selecao);
+
+			String contentType = "application/json;charset=UTF-8";
+			String accept = "application/json";
+			HttpClientUtils.request(this.servicoPost, "POST", json, contentType, accept, this.tokenSessao);
+
+			String ok = "Sucesso na assinatura digital. O Assinador será encerrado.";
+			LOGGER.info(ok);
+			JOptionPane.showMessageDialog(this.janela, ok, "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+			System.exit(0);
+
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+			falhar(e.getMessage());
+		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see br.gov.serpro.dnit.rubrica.client.ControladorJanela#filtrarCertificados(java.security.KeyStore)
+	 */
+	@Override
+	public AbstractTableModel filtrarCertificados(KeyStore keystore) {
+		if ((this.cpf == null || this.cpf.isEmpty()) && (this.cnpj == null || this.cnpj.isEmpty())) {
+			falharCritico("Falha ao obter CPF ou CNPJ do usuário.");
+		}
+		CertificadoFiltradoModel certificateModel = new CertificadoFiltradoModel();
+		certificateModel.populate(keystore, this.cpf, this.cnpj);
+		if (certificateModel.getRowCount() == 0) {
+			String msg = "Não foi encontrado no sistema um certificado com o CPF ou CNPJ ";
+			msg += (this.cpf == null || this.cpf.isEmpty() ? this.cnpj : this.cpf);
+			msg += ". Verifique se o token ou smartcard foi removido e tente executar o Assinador novamente.";
+			falharCritico(msg);
+		}
+		return certificateModel;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see br.gov.serpro.dnit.rubrica.client.ControladorJanela#cancel(java.security.KeyStore, java.lang.String)
+	 */
+	@Override
+	public void cancel(KeyStore keystore, String alias) {
+		this.janela.setVisible(false);
+		this.janela.dispose();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see br.gov.serpro.dnit.rubrica.client.ControladorJanela#close()
+	 */
+	@Override
+	public void close() {
+	}
 
 	/**
 	 * A lista de arquivos que será exibida na tela. Não faz seleção, todos os itens serão assinados.
 	 */
-    /*
+	/*
 	 * (non-Javadoc)
-	 * @see br.gov.serpro.rubrica.client.ControladorJanela#getArquivos()
+	 * @see br.gov.serpro.dnit.rubrica.client.ControladorJanela#getArquivos()
 	 */
-    @Override
+	@Override
 	public List<String> getArquivos() {
 		return this.listaDocumentos;
 	}
 
-    /*
-     * (non-Javadoc)
-     * @see br.gov.serpro.rubrica.client.ControladorJanela#execute(java.security.KeyStore, java.lang.String)
-     */
-    @Override
-    public void execute(KeyStore keystore, String alias) {
+	/*
+	 * (non-Javadoc)
+	 * @see br.gov.serpro.dnit.rubrica.client.ControladorJanela#getText()
+	 */
+	@Override
+	public String getText() {
+		return null;
+	}
 
-        LOGGER.info("Microsoft CryptoAPI está "
-                + (Configuration.getInstance().isMSCapiDisabled() ? "indisponível" : "disponível"));
+	public void setFrame(JFrame janela) {
+		this.janela = janela;
+	}
 
-        try {
-        	verificarCertificado(keystore, alias);
-        	
-        	PKCS7Signer signer = UserCertificateUtils.buildSigner(keystore, alias);
-        	
-            //Varrendo todos os arquivos, gera uma assinatura para cada arquivo
-        	int assinados = 0;
-            for (AssinaturaRemota doc : this.selecao.getAssinaturasRemotas()) {
-            	LOGGER.log(Level.INFO, "Assinando documento: " + doc);
-            	if(doc.getHash() == null) {
-            		LOGGER.log(Level.WARNING, "Hash não veio!");
-            		continue;
-            	}
-            	LOGGER.info(doc.getHash());
-            	//TODO co-assinatura
-            	doc.setAssinatura(UserCertificateUtils.signHashToBase64(Base64.decode(doc.getHash()), signer));
-            	assinados++;
-            }
-            if(assinados == 0) {
-            	falharCritico("Nenhum documento foi assinado");
-            }
-            
-            String json = this.jsonConv.writeValueAsString(this.selecao);
-            
-            String mimeJson = "application/json";
-            HttpClientUtils.send(this.servicoPost, "POST", json, mimeJson, mimeJson, this.tokenSessao);
-            
-            String ok = "Sucesso na assinatura digital. O Assinador será encerrado.";
-            LOGGER.info(ok);
-            System.exit(0);
+	private void configurar() {
+		this.tokenSessao = System.getProperty(JNLP_TOKEN);
+		this.servicoGet = System.getProperty(JNLP_GET);
+		this.servicoPost = System.getProperty(JNLP_POST);
 
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-            falhar(e.getMessage());
-        }
-    }
-    
-    private void verificarCertificado(KeyStore keystore, String alias) throws KeyStoreException{
-        if (this.certificado == null) {
-        	this.certificado = UserCertificateUtils.getICPBrasilCertificate(keystore, alias, false);
-        }
-        try {
-            UserCertificateUtils.validaIdentidade(this.cpf, this.cnpj, this.certificado);
-        }
-        catch (IllegalArgumentException e) {
-            falhar(e.getMessage());
-        }
-    }
+		LOGGER.info("jnlp.token: " + this.tokenSessao);
+		LOGGER.info("jnlp.get: " + this.servicoGet);
+		LOGGER.info("jnlp.post: " + this.servicoPost);
 
-    /*
-     * (non-Javadoc)
-     * @see br.gov.serpro.rubrica.client.ControladorJanela#cancel(java.security.KeyStore, java.lang.String)
-     */
-    @Override
-    public void cancel(KeyStore keystore, String alias) {
-    	this.janela.setVisible(false);
-        this.janela.dispose();
-    }
+		if (this.tokenSessao == null || this.tokenSessao.isEmpty()) {
+			falharCritico("A variável \"jnlp.token\" nao está configurada.");
+		}
 
-    /*
-     * (non-Javadoc)
-     * @see br.gov.serpro.rubrica.client.ControladorJanela#close()
-     */
-    @Override
-    public void close() {
-    }
+		if (this.servicoGet == null || this.servicoGet.isEmpty()) {
+			falharCritico("A variável \"jnlp.get\" nao está configurada.");
+		}
 
-    public void setFrame(JFrame janela) {
-        this.janela = janela;
-    }
+		if (this.servicoPost == null || this.servicoPost.isEmpty()) {
+			falharCritico("A variável \"jnlp.post\" nao está configurada.");
+		}
+	}
 
-    private void falharCritico(Exception e, String preambulo) {
-        LOGGER.severe(e.getMessage());
-        e.printStackTrace();
-        JOptionPane.showMessageDialog(this.janela, preambulo + e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-        System.exit(0);
-    }
+	private void getDadosSessao() {
+		try {
+			String parametros = HttpClientUtils.getJson(this.servicoGet, this.tokenSessao);
+			if(parametros == null || parametros.isEmpty()) {
+				falharCritico("Usuário não possui seleção válida de documentos a assinar.");
+			}
 
-    private void falharCritico(String mensagem) {
-        falhar(mensagem);
-        System.exit(0);
-    }
+			this.jsonConv = new ObjectMapper();
+			this.selecao = this.jsonConv.readValue(parametros, SelecaoAssinaturaRemota.class);
 
-    private void falhar(String mensagem) {
-        LOGGER.severe(mensagem);
-        JOptionPane.showMessageDialog(this.janela, mensagem, "Erro", JOptionPane.ERROR_MESSAGE);
-    }
+			String cpf = selecao.getCpfAssinante();
+			if (cpf.length() == 11) {
+				this.cpf = cpf;
+			}
+			else {
+				falharCritico("Falha ao obter CPF da sessão do usuário.");
+			}
 
-    public AbstractTableModel filtrarCertificados(KeyStore keystore) {
-        if ((this.cpf == null || this.cpf.isEmpty()) && (this.cnpj == null || this.cnpj.isEmpty())) {
-            falharCritico("Falha ao obter CPF ou CNPJ do usuário.");
-        }
-        CertificadoFiltradoModel certificateModel = new CertificadoFiltradoModel();
-        certificateModel.populate(keystore, this.cpf, this.cnpj);
-        if (certificateModel.getRowCount() == 0) {
-            String msg = "Não há certificado no sistema para o identificador ";
-            msg += (this.cpf == null || this.cpf.isEmpty() ? this.cnpj : this.cpf);
-            msg += ". Verifique se o token ou smartcard foi removido e tente executar o Assinador novamente.";
-            falharCritico(msg);
-        }
-        return certificateModel;
-    }
+			if(this.selecao.getAssinaturasRemotas() == null || this.selecao.getAssinaturasRemotas().isEmpty()){
+				falharCritico("Erro de parâmetros do servidor: documentos");
+			}
 
-    private String mockParametros() {
-    	
-    	String parametros = "{\"cpfAssinante\": \"99999999999\","
-    			+ "\"assinaturasRemotas\": [{" 
-        			+ "\"codSolicitacao\": 20,"
-        			+ "\"hash\": \"GXwk+CXw5DQOXkdrybvllYfx0rqNcL2O/7NXJe2nt1k=\","
-        			+ "\"tipoDocumento\": \"Oficio\","
-        			+ "\"sistema\": \"Sistema\","
-        			+ "\"resumo\": \"Processo: 50600.356476/2016-87, Valor: 379.959,01\""
-        			+ "}]}";
-    	   	return parametros;
-    }
+			this.listaDocumentos = new ArrayList<String>();
+
+			for(AssinaturaRemota doc : this.selecao.getAssinaturasRemotas()){
+				if(doc.getHash256() == null || doc.getHash256().trim().isEmpty()
+						|| doc.getHash512() == null || doc.getHash512().trim().isEmpty()) {
+					continue;
+				}
+				this.listaDocumentos.add(doc.getDescricaoArquivo());
+			}
+
+			if(this.listaDocumentos.isEmpty()) {
+				falharCritico("Erro de parâmetros do servidor: nenhum documento com hash");
+			}
+
+		}
+		catch (AuthorizationException e) {
+			falharCritico(e, "Erro de sessão: ");
+		}
+		catch (ConectionException e) {
+			falharCritico(e, "Erro de conexão: ");
+		}
+		catch (ClassCastException | IOException e) {
+			falharCritico(e, "Erro de parâmetros do servidor: ");
+		} 
+	}
+
+	private byte[] getHash(AssinaturaRemota doc, SignerAlgorithmEnum algoritmo, PKCS7Signer signer) {
+		String hashBase64;
+		if(algoritmo == SignerAlgorithmEnum.SHA256withRSA) {
+			if(doc.getHash256() == null) {
+				LOGGER.warning("Hash não recebido!");
+				return null;
+			}
+			LOGGER.info("Código hash a assinar: " + doc.getHash256());
+			hashBase64 = doc.getHash256();
+			doc.setHash512(null);//Sinalizar para o servidor remoto qual hash será usado
+		}
+		else if(algoritmo == SignerAlgorithmEnum.SHA512withRSA){
+			if(doc.getHash512() == null) {
+				LOGGER.warning("Hash não recebido!");
+				return null;
+			}
+			LOGGER.info("Código hash a assinar: " + doc.getHash512());
+			hashBase64 = doc.getHash512();
+			doc.setHash256(null);//Sinalizar para o servidor remoto qual hash será usado
+		}
+		else {
+			return null;
+		}
+
+		return Base64.decode(hashBase64);
+
+	}
+
+	private void verificarCertificado(KeyStore keystore, String alias) throws KeyStoreException{
+		if (this.certificado == null) {
+			this.certificado = UserCertificateUtils.getICPBrasilCertificate(keystore, alias, false);
+		}
+		try {
+			UserCertificateUtils.validaIdentidade(this.cpf, this.cnpj, this.certificado);
+		}
+		catch (IllegalArgumentException e) {
+			falhar(e.getMessage());
+		}
+	}
+
+	private void falhar(String mensagem) {
+		LOGGER.severe(mensagem);
+		JOptionPane.showMessageDialog(this.janela, mensagem, "Erro", JOptionPane.ERROR_MESSAGE);
+	}
+
+	private void falharCritico(Throwable t, String preambulo) {
+		t.printStackTrace();
+		falharCritico(preambulo + t.getMessage());
+	}
+
+	private void falharCritico(String mensagem) {
+		LOGGER.severe(mensagem);
+		JOptionPane.showMessageDialog(this.janela, mensagem, "Erro", JOptionPane.ERROR_MESSAGE);
+		System.exit(0);
+	}
 
 }

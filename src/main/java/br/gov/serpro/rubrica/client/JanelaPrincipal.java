@@ -223,7 +223,6 @@ public class JanelaPrincipal extends JFrame {
 
 
 		//this.listFiles.setEnabled(false);
-		LOGGER.info("Tamanho: " + this.listFiles.getModel().getSize());
 
 		GroupLayout paneltopLayout = new GroupLayout(this.paneltop);
 		this.paneltop.setLayout(paneltopLayout);

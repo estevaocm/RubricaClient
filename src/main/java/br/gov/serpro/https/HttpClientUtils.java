@@ -61,11 +61,7 @@ public class HttpClientUtils {
 	private static final int RUNTIME_MAJOR_VERSION = Integer.valueOf(RUNTIME_VERSION.substring(2, 3));
 	private static final int BUFFER_SIZE = 4096;
 
-	// TODO: Métodos DELETE e PATCH
-
-	// TODO: revisar métodos post/sendForm
-
-	public static String send(String url, String metodo, String params, String contentType, 
+	public static String request(String url, String metodo, String params, String contentType, 
 			String accept, String sessao) {
 		
 		if(url == null || url.trim().isEmpty()) {
@@ -95,13 +91,9 @@ public class HttpClientUtils {
 				// encodedData = URLEncoder.encode(params, "UTF-8");
 				con.setRequestProperty("Content-Length", String.valueOf(params.length()));
 				con.setDoOutput(true);
-				OutputStreamWriter wr = new OutputStreamWriter(con.getOutputStream());
-				try {
+				try(OutputStreamWriter wr = new OutputStreamWriter(con.getOutputStream())){
 					wr.write(params);
 					wr.flush();
-				}
-				finally{
-					wr.close();
 				}
 			}
 
@@ -115,9 +107,7 @@ public class HttpClientUtils {
 			throw new ConectionException(e.getMessage(), causa);
 		}
 		finally{
-			if (con != null) {
-				con.disconnect();
-			}
+			con.disconnect();
 		}
 	}
 
@@ -183,64 +173,28 @@ public class HttpClientUtils {
 	}
 
 	public static String get(String url, String accept, String sessao) {
-		return send(url, "GET", null, null, accept, sessao);
-	}
-
-	/**
-	 * Cria um novo objeto.
-	 * 
-	 * @param url
-	 * @param params
-	 * @param token
-	 * @param certificate
-	 * @return
-	 */
-	public static String post(String url, String params, String sessao, InputStream certificate) {
-		return sendForm(url, params, sessao, certificate, "POST");
-	}
-
-	public static String post(String url, String params, String sessao) {
-		return post(url, params, sessao, null);
-	}
-
-	/**
-	 * Modifica ou substitui um objeto existente, ou cria um novo objeto com identificador especificado na requisição.
-	 * 
-	 * @param url
-	 * @param params
-	 * @param token
-	 * @param certificate
-	 * @return
-	 */
-	public static String put(String url, String params, String sessao, InputStream certificate) {
-		return sendForm(url, params, sessao, certificate, "PUT");
+		return request(url, "GET", null, null, accept, sessao);
 	}
 
 	public static String sendForm(String url, String params, String sessao, InputStream certificate, String method) {
-		return send(url, method, params, "application/x-www-form-urlencoded", null, sessao);
+		return request(url, method, params, "application/x-www-form-urlencoded", null, sessao);
 		//ou "application/octet-stream"
 	}
 
 	public static String read(InputStream stream) throws IOException {
-		try {
-			BufferedReader in = new BufferedReader(new InputStreamReader(stream, Charset.forName("UTF-8")));
-			String linha;
+		try (BufferedReader in = new BufferedReader(new InputStreamReader(stream, Charset.forName("UTF-8")))){
 			StringBuilder response = new StringBuilder();
-			linha = in.readLine();
+			String linha = in.readLine();
 			if (linha != null) {
-				response.append(linha);
+				response.append(linha);//Pega a primeira linha.
 			}
 			while ((linha = in.readLine()) != null) {
+				//A partir da segunda linha, insere o separador de linha após cada uma.
 				response.append(System.getProperty("line.separator"));
 				response.append(linha);
 			}
 			return response.toString();
 		} 
-		finally {
-			if (stream != null) {
-				stream.close();
-			}
-		}
 	}
 
 	public static String getTls() {
@@ -267,77 +221,45 @@ public class HttpClientUtils {
 	 *            Token que identifica o conteudo a ser enviado	 
 	 */
 	public static void uploadToURL(byte[] content, String urlToUpload, String token) {
-		HttpURLConnection con = null;
-		try {
-			ByteArrayInputStream in = new ByteArrayInputStream(content);
-
-			con = getConnection(urlToUpload, token);
+		HttpURLConnection con = getConnection(urlToUpload, token);
+		try(ByteArrayInputStream in = new ByteArrayInputStream(content)){
 			con.setDoOutput(true);
 			con.setRequestMethod("POST");
 			con.setRequestProperty("Content-Type", "application/zip");
 			con.setRequestProperty("Authorization", "Token " + token);
 
-			OutputStream out = con.getOutputStream();
-			try{
+			try(OutputStream out = con.getOutputStream()){
 				copy(in, out);
-			}
-			finally{
 				out.flush();
-				out.close();
 			}
 			getResponseCode(con);
-
 		} 
 		catch (IOException e) {
 			throw new ConectionException(e.getMessage(), e.getCause());
 		}
 		finally{
-			if(con != null){
-				con.disconnect();
-			}
+			con.disconnect();
 		}
 	}
 
 	public static byte[] downloadFromUrl(String urlToDownload, String token) {
-		ByteArrayOutputStream outputStream = null;
-		HttpURLConnection con = null;
-		InputStream stream = null;
+		HttpURLConnection con = getConnection(urlToDownload, token);
+		con.setRequestProperty("Authorization", "Token " + token);
+		con.setRequestProperty("Accept", "application/zip");
 		try{
-			try {
-				outputStream = new ByteArrayOutputStream();
-				byte[] chunk = new byte[BUFFER_SIZE];
-
-				con = getConnection(urlToDownload, token);
-				con.setRequestProperty("Authorization", "Token " + token);
-				con.setRequestProperty("Accept", "application/zip");
-				con.setRequestMethod("GET");
-
-				getResponseCode(con);
-
-				stream = con.getInputStream();
-
-				int bytesRead;
-				while ((bytesRead = stream.read(chunk)) > 0) {
-					outputStream.write(chunk, 0, bytesRead);
-				}
-
-				return outputStream.toByteArray();
-
-			}
-			finally{
-				if(con != null){
-					con.disconnect();
-				}
-				if(outputStream != null){
-					outputStream.close();
-				}
-				if(stream != null){
-					stream.close();
-				}
+			con.setRequestMethod("GET");
+			getResponseCode(con);
+			try(InputStream in = con.getInputStream();
+					ByteArrayOutputStream out = new ByteArrayOutputStream()){
+				copy(in, out);
+				return out.toByteArray();
 			}
 		}
 		catch (IOException e) {
 			throw new ConectionException(e.getMessage(), e.getCause());
+		}
+		finally{
+			con.disconnect();
 		}
 	}
 

@@ -43,6 +43,7 @@ import java.util.List;
 public class SelecaoAssinaturaRemota {
 	
 	private String cpfAssinante;
+	private Long codigoSelecaoAssinaturas;
 	private List<AssinaturaRemota> assinaturasRemotas;
 	
 	public String getCpfAssinante() {
@@ -50,6 +51,12 @@ public class SelecaoAssinaturaRemota {
 	}
 	public void setCpfAssinante(String cpfAssinante) {
 		this.cpfAssinante = cpfAssinante;
+	}
+	public Long getCodigoSelecaoAssinaturas() {
+		return codigoSelecaoAssinaturas;
+	}
+	public void setCodigoSelecaoAssinaturas(Long codigoSelecaoAssinaturas) {
+		this.codigoSelecaoAssinaturas = codigoSelecaoAssinaturas;
 	}
 	public List<AssinaturaRemota> getAssinaturasRemotas() {
 		return assinaturasRemotas;
@@ -64,7 +71,7 @@ public class SelecaoAssinaturaRemota {
 	 */
 	@Override
 	public String toString() {
-		return "SelecaoAssinaturaRemota [cpfAssinante=" + cpfAssinante + ", assinaturasRemotas=" + assinaturasRemotas + "]";
+		return "SelecaoAssinaturaRemota [cpfAssinante=" + cpfAssinante + ", codigoSelecaoAssinaturas=" 
+					+ codigoSelecaoAssinaturas + ", assinaturasRemotas=" + assinaturasRemotas + "]";
 	}
-
 }

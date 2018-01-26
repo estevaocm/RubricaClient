@@ -1,8 +1,6 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-	
 	<modelVersion>4.0.0</modelVersion>
-	
 	<groupId>br.gov.serpro</groupId>
 	<artifactId>rubrica-client</artifactId>
 	<version>1.0.0</version>
@@ -12,12 +10,6 @@
 	Intented for Java Web Start. Based on Demoiselle Signer and BouncyCastle. </description>
 	<url>https://github.com/estevaocm/RubricaClient</url>
 	
-	<organization>
-		<name>SERPRO</name>
-		<url>https://www.serpro.gov.br</url>
-	</organization>
-	
-
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<timestamp>${maven.build.timestamp}</timestamp>
@@ -25,7 +17,7 @@
 		<manifest.filename>MANIFEST.MF</manifest.filename>
 		<file.name>rubrica-client</file.name>
 		<file.suffix></file.suffix>
-		<signer.version>3.2.1</signer.version>
+		<signer.version>3.2.2</signer.version>
 		<bouncycastle.version>1.52</bouncycastle.version>
 		<!-- A versão 1.52 é a mais compatível com ICP-Brasil. -->
 	</properties>
@@ -134,7 +126,7 @@
                         <manifestEntries>
                             <Permissions>all-permissions</Permissions>
                             <Codebase>*</Codebase>
-                            <Application-Name>RubricaClient</Application-Name>
+                            <Application-Name>Cliente Assinador DNIT</Application-Name>
                             <Application-Library-Allowable-Codebase>*</Application-Library-Allowable-Codebase>
                             <Caller-Allowable-Codebase>*</Caller-Allowable-Codebase>
                             <Trusted-Only>true</Trusted-Only>
