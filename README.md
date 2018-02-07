@@ -1,40 +1,46 @@
 # RubricaClient
 
-Cliente JNLP para assinar hashes recebidos por API RESTful, baseado nos projetos Demoiselle Signer Desktop.
+Cliente Java Web Start para assinatura digital de códigos hash recebidos por API RESTful.
+Baseado em Demoiselle Signer Desktop. Desenvolvido em Java 8.
 
+## Preparação para execução segura
 
-## Notas ao desenvolvedor
+Para execução segura em Java Web Start, o pacote JAR com as dependências deve ser assinado 
+digitalmente e a cadeia de autoridades certificadoras do assinante deve ser reconhecida pela 
+instalação local do Java no cliente. Autoridades certificadoras ICP-Brasil, como o SERPRO, não vêm 
+pré-configuradas nas instalações do Java e dos sistemas operacionais, então precisam ser 
+manualmente instaladas em cada sistema cliente. Os certificados podem ser exportados do token 
+assinante ou baixados do endereço:
+https://certificados.serpro.gov.br/arserpro/pages/information/certificate_chain.jsf
 
-As informações abaixo se referem a uma versão anterior do cliente e devem ser 
-atualizadas.
+A instalação da cadeia de certificados do assinante do JAR deve ser feita no Painel de Controle Java
+(jcontrol):
+1. aba Segurança;
+2. Gerenciar Certificados...;
+3. Tipo de Certificado: CA de Signatário;
+4. Importar.
 
-Os certificados reconhecidos são definidos pela dependência "demoiselle-
-certificate-ca-icpbrasil", que aceita apenas certificados de produção. Para 
-certificados de homologação, por exemplo, certificados A1 em arquivo usados 
-para simular PJs, é necessário EXCLUIR o "demoiselle-certificate-ca-icpbrasil" e
-INCLUIR o "demoiselle-certificate-ca-icpbrasil-homologacao".
+O mesmo procedimento será necessário para a cadeia de certificados do servidor da API RESTful, caso 
+seja diferente do assinante do JAR. Alternativamente, o certificado do servidor pode ser importado 
+na categoria Tipo de Certificado: Local Seguro, desconsiderando-se a cadeia de autoridades
+certificadoras.
 
-Em ambientes de desenvolvimento, testes e homologação, tipicamente o servidor
-apresenta-se para HTTPS com um certificado auto-assinado, diferente de produção,
-onde apresenta-se com certificado com a devida cadeia válida ICP-Brasil. Isso
-causa problemas no handshake da conexão no Java. Por isso, a classe
-AssinadorClienteRest faz uma chamada estática ao método suspenderValidacaoCadeia
-de ServerCertificateUtils. As versões de desenvolvimento, testes e homologação
-devem fazer essa chamada para poder se conectar ao servidor com certificado
-auto-assinado. Recomenda-se que essa chamada não seja executada pela versão de
-produção, embora não haja previsão de falhas ou adulteração das operações mesmo
-em ataques man-in-the-middle, já que o servidor verifica a validade de todos os
-dados recebidos (descriptografa o texto assinado, verifica o certificado do
-signatário, confere o CPF do signatário com o CPF da sessão etc.).
+Não é recomendado, mas também é possível acrescentar o domínio do codebase do RubricaClient na 
+Lista de Exceções de Sites. Esta opção pode ser conveniente durante o desenvolvimento.
 
-Tipicamente, geramos três versões: desenvolvimento (certificados de produção,
-chamando suspenderValidacaoCadeia), homologação (certificados de homologação,
-chamando suspenderValidacaoCadeia) e produção (certificados de produção, sem
-chamar suspenderValidacaoCadeia). As versões são publicadas no endereço 
-"/public/certificado/webstart".
+## Compatibilidade com tokens
 
-Por padrão, a build maven produz pacotes auto-assinados. Para produção, é
-necessário remover as configurações de auto-assinatura e assinar com certificado
-oficial do Serpro.
+O Demoiselle Signer foi testado com tokens Safenet, Aladdin e Watchdata. Em geral, todos são 
+suportados.
 
-Estêvão Monteiro, 7 de novembro de 2016
+O Demoiselle Signer pode não suportar o token Watchdata Watchkey especificamente em sistemas Linux
+de 64 bits com Java 8. Esse token foi testado com sucesso em sistemas Linux de 32 bits e em 
+sistemas Windows com Java 7.
+
+Sistemas Windows atualmente só suportam assinaturas com códigos hash de 256 bits; 512 bits não são
+suportados. Há que se observar a compatibilidade com padrões futuros ICP-Brasil.
+
+## Identificação de erros
+
+O RubricaClient imprime no console todas as informações importantes de sua execução.
+Para visualizá-las, habilitar a opção Mostrar Console na aba Avançado do Painel de Controle Java.

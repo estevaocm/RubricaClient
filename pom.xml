@@ -19,10 +19,33 @@
 		<file.suffix></file.suffix>
 		<signer.version>3.2.2</signer.version>
 		<bouncycastle.version>1.52</bouncycastle.version>
-		<!-- A versão 1.52 é a mais compatível com ICP-Brasil. -->
+		<!-- A versão 1.52 é a mais compatível com ICP-Brasil.
+		Essa definição deve ficar explícita para não ser modificada pela dependência
+		org.demoiselle.signer.jnlp. -->
 	</properties>
 
 	<dependencies>
+		<dependency>
+			<groupId>org.demoiselle.signer</groupId>
+			<artifactId>policy-impl-cades</artifactId>
+			<version>${signer.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>com.itextpdf</groupId>
+					<artifactId>sign</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.demoiselle.signer</groupId>
+					<artifactId>timestamp</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>org.demoiselle.signer</groupId>
+			<artifactId>chain-icp-brasil</artifactId>
+			<version>${signer.version}</version>
+		</dependency>
+		<!-- 
 		<dependency>
 			<groupId>org.demoiselle.signer</groupId>
 			<artifactId>core</artifactId>
@@ -30,20 +53,10 @@
 		</dependency>
 		<dependency>
 			<groupId>org.demoiselle.signer</groupId>
-			<artifactId>policy-impl-cades</artifactId>
-			<version>${signer.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.demoiselle.signer</groupId>
-			<artifactId>chain-icp-brasil</artifactId>
-			<version>${signer.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.demoiselle.signer</groupId>
 			<artifactId>timestamp</artifactId>
 			<version>${signer.version}</version>
 		</dependency>
-		
+		 -->
 		<dependency>
 			<groupId>org.bouncycastle</groupId>
 			<artifactId>bcprov-jdk15on</artifactId>

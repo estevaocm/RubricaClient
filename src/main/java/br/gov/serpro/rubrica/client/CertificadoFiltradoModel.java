@@ -35,11 +35,12 @@ package br.gov.serpro.rubrica.client;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.cert.X509Certificate;
+import java.util.Date;
 import java.util.Enumeration;
-import java.util.logging.Logger;
 
 import javax.swing.table.AbstractTableModel;
 
+import org.apache.log4j.Logger;
 import org.demoiselle.signer.jnlp.tiny.Item;
 
 import br.gov.serpro.https.UserCertificateUtils;
@@ -55,7 +56,7 @@ public class CertificadoFiltradoModel extends AbstractTableModel {
 
     private Object[][] dados;
     private final String[] columnNames = { "Emitido Para", "Válido de", "Válido até", "Emitido Por" };
-    private static final Logger LOGGER = Logger.getLogger(CertificadoFiltradoModel.class.getName());
+    private static final Logger L = Logger.getLogger(CertificadoFiltradoModel.class);
 
     @Override
     public int getRowCount() {
@@ -85,10 +86,10 @@ public class CertificadoFiltradoModel extends AbstractTableModel {
 
     public void populate(KeyStore keystore, String cpf, String cnpj) {
 
-        LOGGER.fine("populando lista de certificados.");
+        L.debug("populando lista de certificados.");
 
         if (keystore == null) {
-            LOGGER.severe("keystore null");
+            L.error("keystore null");
             return;
         }
         try {
@@ -102,17 +103,23 @@ public class CertificadoFiltradoModel extends AbstractTableModel {
             Enumeration<String> aliases = keystore.aliases();
             while (aliases.hasMoreElements()) {
                 String alias = aliases.nextElement();
-                LOGGER.info("Processando ALIAS: " + alias);
+                L.info("Processando ALIAS: " + alias);
 
                 try {
                     UserCertificateUtils.validaIdentidade(cpf, cnpj, keystore, alias);
-                } catch (IllegalArgumentException e) {
-                    LOGGER.severe("Erro validando identidade do certificado:" + e.getMessage());
+                }
+                catch (IllegalArgumentException e) {
+                    L.error(e.getMessage());
                     continue;
                 }
 
                 X509Certificate certificate = (X509Certificate) keystore.getCertificate(alias);
 
+                if(certificate.getNotAfter().before(new Date())) {
+                	L.info("Certificado " + alias + " já expirou: " + certificate.getNotAfter());
+                	continue;
+                }
+                
                 Item item = new Item(alias, certificate.getSubjectDN().getName(), certificate.getNotBefore(),
                         certificate.getNotAfter(), certificate.getIssuerDN().getName());
                 tabela[ik][0] = item;
@@ -120,7 +127,7 @@ public class CertificadoFiltradoModel extends AbstractTableModel {
                 tabela[ik][2] = item.getEndDate();
                 tabela[ik][3] = item.getIssuer();
                 ik++;
-                LOGGER.info("ALIAS: " + alias + " adicionado com sucesso");
+                L.info("ALIAS: " + alias + " adicionado com sucesso");
             }
 
             if (ik == 0) {

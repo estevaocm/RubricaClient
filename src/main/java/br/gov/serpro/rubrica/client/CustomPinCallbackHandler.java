@@ -37,7 +37,6 @@ import java.awt.event.WindowEvent;
 import java.awt.event.WindowFocusListener;
 import java.io.IOException;
 import java.util.concurrent.CancellationException;
-import java.util.logging.Logger;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
@@ -50,13 +49,14 @@ import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
+import org.apache.log4j.Logger;
 
 /**
  * @author SUPST/STDCS; Estêvão Monteiro
 */
 public class CustomPinCallbackHandler implements CallbackHandler {
 
-	private static final Logger LOGGER = Logger.getLogger(CustomPinCallbackHandler.class.getName());
+	private static final Logger L = Logger.getLogger(CustomPinCallbackHandler.class);
 	
     public void handle(Callback[] callbacks) throws IOException, UnsupportedCallbackException {
 
@@ -83,7 +83,7 @@ public class CustomPinCallbackHandler implements CallbackHandler {
         	label = passwordCallback.getPrompt();
         }
         else{
-        	LOGGER.info(passwordCallback.getPrompt());
+        	L.info(passwordCallback.getPrompt());
         }
         panel.add(new JLabel(label));
         

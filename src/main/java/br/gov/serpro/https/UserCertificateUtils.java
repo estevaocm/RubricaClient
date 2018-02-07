@@ -33,13 +33,14 @@
 package br.gov.serpro.https;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
-import java.util.logging.Logger;
 
+import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.demoiselle.signer.core.extension.BasicCertificate;
 import org.demoiselle.signer.core.keystore.loader.configuration.Configuration;
@@ -57,12 +58,12 @@ import org.demoiselle.signer.policy.impl.cades.pkcs7.PKCS7Signer;
  */
 public class UserCertificateUtils {
 
-	private static final Logger LOGGER = Logger.getLogger(UserCertificateUtils.class.getName());
+	private static final Logger L = Logger.getLogger(UserCertificateUtils.class);
 
 	public static BasicCertificate getICPBrasilCertificate(KeyStore keystore, String alias, boolean valid)
 			throws KeyStoreException {
 
-		LOGGER.info("getICPBrasilCertificate() - ALIAS: " + alias);
+		L.info("getICPBrasilCertificate() - ALIAS: " + alias);
 
 		if (alias == null || alias.equals("")) {
 			alias = keystore.aliases().nextElement();
@@ -104,11 +105,11 @@ public class UserCertificateUtils {
 		if (System.getProperty("java.version").contains("1.8") 
 				&& signer != null && signer.getProvider() != null 
 				&& signer.getProvider().getName().contains("TokenOuSmartCard_30")) {
-			LOGGER.info("Detectado token WatchData e Java 8; configurando o algoritmo para Sha256withRSA.");
+			L.info("Detectado token WatchData e Java 8; configurando o algoritmo para Sha256withRSA.");
 			retorno = SignerAlgorithmEnum.SHA256withRSA;
 		}
 		if (Configuration.getInstance().getSO().toLowerCase().indexOf("indows") > 0) {
-			LOGGER.info("Detectado Windows; configurando o algoritmo para Sha256withRSA.");
+			L.info("Detectado Windows; configurando o algoritmo para Sha256withRSA.");
 			retorno = SignerAlgorithmEnum.SHA256withRSA;
 		}
 		return retorno;
@@ -130,49 +131,54 @@ public class UserCertificateUtils {
 	public static byte[] sign(String textToSign, KeyStore keystore, String alias)
 			throws GeneralSecurityException, UnsupportedEncodingException {
 		
-		LOGGER.info("Assinando texto: \"" + textToSign + "\"");
-		byte[] content = textToSign.getBytes("UTF-8");
+		L.info("Assinando texto: \"" + textToSign + "\"");
+		byte[] content = textToSign.getBytes(StandardCharsets.UTF_8);
 		return sign(content, keystore, alias);
 	}
 
 	public static byte[] sign(String textToSign, PKCS7Signer signer)
 			throws GeneralSecurityException, UnsupportedEncodingException {
 		
-		LOGGER.info("Assinando texto: \"" + textToSign + "\"");
-		byte[] content = textToSign.getBytes("UTF-8");
+		L.info("Assinando texto: \"" + textToSign + "\"");
+		byte[] content = textToSign.getBytes(StandardCharsets.UTF_8);
 		return sign(content, signer);
 	}
 	
 	public static String signToBase64(String textToSign, KeyStore keystore, String alias)
 			throws GeneralSecurityException, UnsupportedEncodingException {
 
-		String assinado = new String(Base64.encode(sign(textToSign, keystore, alias)));
-		LOGGER.info("Texto assinado: " + assinado);
+		String assinado = bytesToBase64(sign(textToSign, keystore, alias));
+		L.debug("Texto assinado: " + assinado);
 		return assinado;
 	}
 
 	public static String signToBase64(byte[] content, PKCS7Signer signer)
 			throws GeneralSecurityException {
 
-		String assinado = new String(Base64.encode(sign(content, signer)));
-		LOGGER.info("Texto assinado: " + assinado);
+		String assinado = bytesToBase64(sign(content, signer));
+		L.debug("Texto assinado: " + assinado);
 		return assinado;
 	}
 
 	public static String signHashToBase64(byte[] content, PKCS7Signer signer)
 			throws GeneralSecurityException {
 
-		String assinado = new String(Base64.encode(signHash(content, signer)));
-		LOGGER.info("Texto assinado: " + assinado);
+		String assinado = bytesToBase64(signHash(content, signer));
+		L.debug("Texto assinado: " + assinado);
 		return assinado;
 	}
 
 	public static String signToBase64(byte[] content, KeyStore keystore, String alias)
 			throws GeneralSecurityException {
 
-		String assinado = new String(Base64.encode(sign(content, keystore, alias)));
-		LOGGER.info("Texto assinado: " + assinado);
+		String assinado = bytesToBase64(sign(content, keystore, alias));
+		L.debug("Texto assinado: " + assinado);
 		return assinado;
+	}
+	
+	private static String bytesToBase64(byte[] bytes) {
+		//Strings.asCharArray()
+		return new String(Base64.encode(bytes), StandardCharsets.UTF_8);
 	}
 
 	/**
@@ -205,8 +211,8 @@ public class UserCertificateUtils {
 			if (certificado.getICPBRCertificatePJ() != null){
 				String raizCnpj = cnpj.substring(0,8);
 				pessoaInvalida = !certificado.getICPBRCertificatePJ().getCNPJ().startsWith(raizCnpj);
-				LOGGER.info("Raiz:" + raizCnpj + "---");
-				LOGGER.info("CNPJ:" + certificado.getICPBRCertificatePJ().getCNPJ() +"---");
+				L.info("Raiz:" + raizCnpj + "---");
+				L.info("CNPJ:" + certificado.getICPBRCertificatePJ().getCNPJ() +"---");
 			}
 
 			if (pessoaInvalida) {

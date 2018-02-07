@@ -42,9 +42,9 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.charset.Charset;
-import java.util.logging.Logger;
+import java.nio.charset.StandardCharsets;
 
+import org.apache.log4j.Logger;
 import org.demoiselle.signer.jnlp.util.AuthorizationException;
 import org.demoiselle.signer.jnlp.util.ConectionException;
 
@@ -56,7 +56,7 @@ import org.demoiselle.signer.jnlp.util.ConectionException;
  */
 public class HttpClientUtils {
 
-	private static final Logger LOGGER = Logger.getLogger(HttpClientUtils.class.getName());
+	private static final Logger L = Logger.getLogger(HttpClientUtils.class);
 	private static final String RUNTIME_VERSION = System.getProperty("java.version");
 	private static final int RUNTIME_MAJOR_VERSION = Integer.valueOf(RUNTIME_VERSION.substring(2, 3));
 	private static final int BUFFER_SIZE = 4096;
@@ -72,7 +72,7 @@ public class HttpClientUtils {
 			throw new IllegalArgumentException("metodo=" + metodo);
 		}
 
-		LOGGER.info(metodo + ": " + url);
+		L.info(metodo + ": " + url);
 		
 		HttpURLConnection con = getConnection(url, sessao);
 		
@@ -83,6 +83,10 @@ public class HttpClientUtils {
 		if(contentType != null) {
 			con.setRequestProperty("Content-Type", contentType);
 		}
+		
+		//https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html
+		//con.setRequestProperty("Accept-Charset", accept);
+		//con.setRequestProperty("Accept-Encoding", accept);
 		
 		try {
 			con.setRequestMethod(metodo);
@@ -99,7 +103,7 @@ public class HttpClientUtils {
 
 			getResponseCode(con);
 			String resposta = read(con.getInputStream());
-			LOGGER.info("Resposta: " + resposta);
+			L.info("Resposta: " + resposta);
 			return resposta;
 		}
 		catch (IOException e) {
@@ -129,47 +133,45 @@ public class HttpClientUtils {
 		}
 	}
 
-	private static void getResponseCode(HttpURLConnection con) throws IOException {
-
+	private static void getResponseCode(HttpURLConnection con) throws IOException {		
 		int responseCode = con.getResponseCode();
 
-		String mensagem = "";
-		if (responseCode >= 400) {
-			mensagem = "Erro HTTP " + responseCode;
-			LOGGER.severe(mensagem);
-		} 
-		else {
-			LOGGER.info("Resposta HTTP " + responseCode);
+		String resposta = responseCode + ": " + con.getResponseMessage();
+		String erro = null;
+		if (responseCode < 400) {
+			resposta = "Resposta HTTP " + resposta;
+			L.info(resposta);
+			return;
 		}
+		
+		resposta = "Erro HTTP " + resposta;
+		L.error(resposta);
+		erro = read(con.getErrorStream());
+		L.error(erro);
 
 		if (responseCode == HttpURLConnection.HTTP_UNAUTHORIZED || responseCode == HttpURLConnection.HTTP_FORBIDDEN) {
 			throw new AuthorizationException("Acesso ou operação não autorizado(a).");
 		}
-
-		if (responseCode == HttpURLConnection.HTTP_BAD_REQUEST) {
+		else if (responseCode == HttpURLConnection.HTTP_BAD_REQUEST) {
 			throw new AuthorizationException("Acesso ou operação inválido(a).");
 		}
-
-		if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
+		else if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
 			throw new AuthorizationException("Objeto não encontrado.");
 		}
-
-		if (responseCode == HttpURLConnection.HTTP_CONFLICT) {
+		else if (responseCode == HttpURLConnection.HTTP_CONFLICT) {
 			throw new AuthorizationException("O objeto a inserir já existe.");
 		}
-
-		if (responseCode >= 400) {
-			LOGGER.severe(read(con.getErrorStream())); // Tende a trazer HTML do container Web
-			throw new ConectionException(mensagem);
+		else {
+			throw new ConectionException(resposta, new ConectionException(erro));
 		}
 	}
 
 	public static String getText(String url, String sessao) {
-		return get(url, "text/plain", sessao);
+		return get(url, "text/plain;charset=UTF-8", sessao);
 	}
 
 	public static String getJson(String url, String sessao) {
-		return get(url, "application/json", sessao);
+		return get(url, "application/json;charset=UTF-8", sessao);
 	}
 
 	public static String get(String url, String accept, String sessao) {
@@ -182,17 +184,13 @@ public class HttpClientUtils {
 	}
 
 	public static String read(InputStream stream) throws IOException {
-		try (BufferedReader in = new BufferedReader(new InputStreamReader(stream, Charset.forName("UTF-8")))){
-			StringBuilder response = new StringBuilder();
-			String linha = in.readLine();
-			if (linha != null) {
-				response.append(linha);//Pega a primeira linha.
-			}
-			while ((linha = in.readLine()) != null) {
-				//A partir da segunda linha, insere o separador de linha após cada uma.
-				response.append(System.getProperty("line.separator"));
-				response.append(linha);
-			}
+		try (BufferedReader in = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))){
+	        int n;
+	        char[] buffer = new char[4096];
+			StringBuilder response = new StringBuilder(64);
+	        while (-1 != (n = in.read(buffer))) {
+				response.append(buffer, 0, n);
+	        }
 			return response.toString();
 		} 
 	}

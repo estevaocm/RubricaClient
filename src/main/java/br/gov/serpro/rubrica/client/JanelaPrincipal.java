@@ -41,8 +41,6 @@ import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.security.KeyStore;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import javax.swing.BorderFactory;
 import javax.swing.DefaultListModel;
@@ -58,11 +56,13 @@ import javax.swing.JTable;
 import javax.swing.LayoutStyle.ComponentPlacement;
 import javax.swing.UIManager;
 import javax.swing.UIManager.LookAndFeelInfo;
+import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.WindowConstants;
 import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
 
+import org.apache.log4j.Logger;
 import org.demoiselle.signer.core.exception.CertificateValidatorException;
 import org.demoiselle.signer.core.keystore.loader.DriverNotAvailableException;
 import org.demoiselle.signer.core.keystore.loader.InvalidPinException;
@@ -80,7 +80,7 @@ import org.demoiselle.signer.jnlp.tiny.Item;
 public class JanelaPrincipal extends JFrame {
 
 	private static final long serialVersionUID = 1L;
-	private static final Logger LOGGER = Logger.getLogger(JanelaPrincipal.class.getName());
+	private static final Logger L = Logger.getLogger(JanelaPrincipal.class);
 
 	private JButton btnCancelar;
 	private JButton btnExecutar;
@@ -409,14 +409,9 @@ public class JanelaPrincipal extends JFrame {
 					break;
 				}
 			}
-		} catch (ClassNotFoundException ex) {
-			LOGGER.log(Level.SEVERE, null, ex);
-		} catch (InstantiationException ex) {
-			LOGGER.log(Level.SEVERE, null, ex);
-		} catch (IllegalAccessException ex) {
-			LOGGER.log(Level.SEVERE, null, ex);
-		} catch (javax.swing.UnsupportedLookAndFeelException ex) {
-			LOGGER.log(Level.SEVERE, null, ex);
+		} catch (ClassNotFoundException | InstantiationException | IllegalAccessException 
+				| UnsupportedLookAndFeelException ex) {
+			L.error(ex.getMessage(), ex);
 		}
 		//</editor-fold>
 		//</editor-fold>

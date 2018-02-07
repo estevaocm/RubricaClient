@@ -33,17 +33,22 @@
 package br.gov.serpro.rubrica.client;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.ProviderException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
 
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.table.AbstractTableModel;
 
+import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.demoiselle.signer.core.extension.BasicCertificate;
 import org.demoiselle.signer.core.keystore.loader.configuration.Configuration;
@@ -65,8 +70,8 @@ import br.gov.serpro.https.UserCertificateUtils;
  * 
  */
 public class RubricaClient implements ControladorJanela {
-
-	private static final Logger LOGGER = Logger.getLogger(RubricaClient.class.getName());
+	
+	private static final Logger L = Logger.getLogger(RubricaClient.class);
 
 	private static final String JNLP_TOKEN = "jnlp.token";
 	private static final String JNLP_GET = "jnlp.get";
@@ -101,7 +106,7 @@ public class RubricaClient implements ControladorJanela {
 	@Override
 	public void execute(KeyStore keystore, String alias) {
 
-		LOGGER.info("Microsoft CryptoAPI está "
+		L.info("Microsoft CryptoAPI está "
 				+ (Configuration.getInstance().isMSCapiDisabled() ? "indisponível" : "disponível"));
 
 		try {
@@ -113,7 +118,7 @@ public class RubricaClient implements ControladorJanela {
 			//Varrendo todos os arquivos, gera uma assinatura para cada arquivo
 			int assinados = 0;
 			for (AssinaturaRemota doc : this.selecao.getAssinaturasRemotas()) {
-				LOGGER.info("Assinando documento: " + doc);
+				L.info("Assinando documento: " + doc);
 
 				byte[] hash = getHash(doc, algoritmo, signer);
 				if(hash == null) {
@@ -130,6 +135,7 @@ public class RubricaClient implements ControladorJanela {
 					falharCritico(t, "Falha no driver do token: ");
 				}
 				doc.setAssinatura(assinatura);
+				doc.setDescricaoArquivo(forcarUtf8(doc.getDescricaoArquivo()));
 				assinados++;
 			}
 			if(assinados == 0) {
@@ -137,20 +143,42 @@ public class RubricaClient implements ControladorJanela {
 			}
 
 			String json = this.jsonConv.writeValueAsString(this.selecao);
+			L.info("Enviar " + json);
 
 			String contentType = "application/json;charset=UTF-8";
-			String accept = "application/json";
-			HttpClientUtils.request(this.servicoPost, "POST", json, contentType, accept, this.tokenSessao);
+			//String accept = "application/json";
+			try {
+				HttpClientUtils.request(this.servicoPost, "POST", json, contentType, contentType, this.tokenSessao);
+			}
+			catch(ConectionException ce) {
+				//A descrição pode dar problema de encoding no Windows.
+				Throwable c = ce.getCause();
+				if(c != null && c instanceof ConectionException 
+						&& c.getMessage().contains("Invalid UTF-8 middle byte")) {
+					L.warn(c.getMessage());
+					for (AssinaturaRemota doc : this.selecao.getAssinaturasRemotas()) {
+						//O servidor não precisa dessa informação.
+						doc.setDescricaoArquivo(null);
+					}
+					json = this.jsonConv.writeValueAsString(this.selecao);
+					L.info("Enviar " + json);
+					HttpClientUtils.request(this.servicoPost, "POST", json, contentType, contentType, this.tokenSessao);
+				}
+				else {
+					throw ce;
+				}
+			}
 
 			String ok = "Sucesso na assinatura digital. O Assinador será encerrado.";
-			LOGGER.info(ok);
+			L.info(ok);
 			JOptionPane.showMessageDialog(this.janela, ok, "Sucesso", JOptionPane.INFORMATION_MESSAGE);
 			System.exit(0);
 
 		}
-		catch (Exception e) {
-			e.printStackTrace();
-			falhar(e.getMessage());
+		catch (Throwable t) {
+			System.out.println();
+			t.printStackTrace();
+			falhar(t.getMessage());
 		}
 	}
 
@@ -222,9 +250,9 @@ public class RubricaClient implements ControladorJanela {
 		this.servicoGet = System.getProperty(JNLP_GET);
 		this.servicoPost = System.getProperty(JNLP_POST);
 
-		LOGGER.info("jnlp.token: " + this.tokenSessao);
-		LOGGER.info("jnlp.get: " + this.servicoGet);
-		LOGGER.info("jnlp.post: " + this.servicoPost);
+		L.info("jnlp.token: " + this.tokenSessao);
+		L.info("jnlp.get: " + this.servicoGet);
+		L.info("jnlp.post: " + this.servicoPost);
 
 		if (this.tokenSessao == null || this.tokenSessao.isEmpty()) {
 			falharCritico("A variável \"jnlp.token\" nao está configurada.");
@@ -249,7 +277,7 @@ public class RubricaClient implements ControladorJanela {
 			this.jsonConv = new ObjectMapper();
 			this.selecao = this.jsonConv.readValue(parametros, SelecaoAssinaturaRemota.class);
 
-			String cpf = selecao.getCpfAssinante();
+			String cpf = this.selecao.getCpfAssinante();
 			if (cpf.length() == 11) {
 				this.cpf = cpf;
 			}
@@ -291,19 +319,19 @@ public class RubricaClient implements ControladorJanela {
 		String hashBase64;
 		if(algoritmo == SignerAlgorithmEnum.SHA256withRSA) {
 			if(doc.getHash256() == null) {
-				LOGGER.warning("Hash não recebido!");
+				L.warn("Hash não recebido!");
 				return null;
 			}
-			LOGGER.info("Código hash a assinar: " + doc.getHash256());
+			L.info("Código hash a assinar: " + doc.getHash256());
 			hashBase64 = doc.getHash256();
 			doc.setHash512(null);//Sinalizar para o servidor remoto qual hash será usado
 		}
 		else if(algoritmo == SignerAlgorithmEnum.SHA512withRSA){
 			if(doc.getHash512() == null) {
-				LOGGER.warning("Hash não recebido!");
+				L.warn("Hash não recebido!");
 				return null;
 			}
-			LOGGER.info("Código hash a assinar: " + doc.getHash512());
+			L.info("Código hash a assinar: " + doc.getHash512());
 			hashBase64 = doc.getHash512();
 			doc.setHash256(null);//Sinalizar para o servidor remoto qual hash será usado
 		}
@@ -328,19 +356,44 @@ public class RubricaClient implements ControladorJanela {
 	}
 
 	private void falhar(String mensagem) {
-		LOGGER.severe(mensagem);
+		L.error(mensagem);
 		JOptionPane.showMessageDialog(this.janela, mensagem, "Erro", JOptionPane.ERROR_MESSAGE);
 	}
 
 	private void falharCritico(Throwable t, String preambulo) {
+		System.out.println();
 		t.printStackTrace();
 		falharCritico(preambulo + t.getMessage());
 	}
 
 	private void falharCritico(String mensagem) {
-		LOGGER.severe(mensagem);
+		L.error(mensagem);
 		JOptionPane.showMessageDialog(this.janela, mensagem, "Erro", JOptionPane.ERROR_MESSAGE);
 		System.exit(0);
 	}
+
+    /**
+     * ISO-8859-1 pode ser convertido para UTF-8, embora o inverso não seja válido.
+     * Sistemas legados podem ainda estar usando ISO em vez de UTF.
+     * @param texto
+     * @return
+     */
+    private String forcarUtf8(String texto) {
+    	CharsetEncoder enc = StandardCharsets.UTF_8.newEncoder();
+    	if(!enc.canEncode(texto)) {
+    		L.warn("Texto incompatível com UTF-8: " + texto);
+    	}
+    	ByteBuffer buf;
+    	try {
+			buf = enc.encode(CharBuffer.wrap(texto));
+		}
+    	catch (CharacterCodingException e) {
+    		L.warn(e.getMessage());
+			return new String(texto.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
+		}
+		byte[] bytes = new byte[buf.remaining()];
+		buf.get(bytes);
+		return new String(bytes, StandardCharsets.UTF_8);
+    }
 
 }
